@@ -10,7 +10,11 @@ import com.railtrack.ai.service.AiHistoryService;
 import com.railtrack.auth.entity.User;
 import com.railtrack.auth.service.UserService;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.TransactionSystemException;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -23,8 +27,9 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/v1/ai/assistant")
-@CrossOrigin(origins = "*")
 public class AiAssistantController {
+
+    private static final Logger log = LoggerFactory.getLogger(AiAssistantController.class);
 
     private final AiChatService aiChatService;
     private final AiHistoryService aiHistoryService;
@@ -53,6 +58,12 @@ public class AiAssistantController {
         rateLimiterService.checkAndConsume(user.getId());
 
         String reply = aiChatService.chat(request.getMessage());
+
+        try {
+            aiHistoryService.saveHistory(user, request.getMessage(), reply);
+        } catch (DataAccessException | TransactionSystemException e) {
+            log.warn("Unable to save AI assistant history for user {}", user.getId(), e);
+        }
 
         AiRateLimitStatus status = rateLimiterService.getStatus(user.getId());
 

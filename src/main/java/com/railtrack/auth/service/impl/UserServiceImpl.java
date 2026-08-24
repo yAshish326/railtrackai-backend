@@ -4,6 +4,7 @@ import com.railtrack.ai.repository.AiHistoryRepository;
 import com.railtrack.auth.dto.request.UpdateProfileRequest;
 import com.railtrack.auth.dto.response.UserResponse;
 import com.railtrack.auth.entity.User;
+import com.railtrack.auth.exception.InvalidCredentialsException;
 import com.railtrack.auth.exception.UserNotFoundException;
 import com.railtrack.auth.mapper.UserMapper;
 import com.railtrack.auth.repository.UserRepository;
@@ -15,6 +16,7 @@ import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -126,7 +128,19 @@ public class UserServiceImpl implements UserService {
     public User getAuthenticatedUser() {
         Authentication authentication =
                 SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null
+                || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            throw new InvalidCredentialsException("Authentication is required.");
+        }
+
         String email = authentication.getName();
+
+        if (email == null || email.isBlank() || "anonymousUser".equalsIgnoreCase(email)) {
+            throw new InvalidCredentialsException("Authentication is required.");
+        }
+
         return userRepository.findByEmail(email)
                 .orElseThrow(() ->
                         new UserNotFoundException("User not found."));

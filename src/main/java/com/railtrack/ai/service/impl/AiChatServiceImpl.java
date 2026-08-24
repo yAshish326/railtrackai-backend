@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.time.Duration;
 import java.util.List;
@@ -82,6 +83,10 @@ public class AiChatServiceImpl implements AiChatService {
             }
             return content.trim();
 
+        } catch (WebClientResponseException e) {
+            log.error("Groq chat completion failed: status={}, response={}",
+                    e.getStatusCode(), e.getResponseBodyAsString());
+            return FALLBACK_MESSAGE;
         } catch (Exception e) {
             log.error("Groq chat completion failed", e);
             return FALLBACK_MESSAGE;

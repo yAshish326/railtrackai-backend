@@ -212,7 +212,9 @@ public class TrainServiceImpl implements TrainService {
 
             int diff = depMinutes - arrMinutes;
             return Math.max(diff, 0);
-        } catch (Exception e) {
+        } catch (NumberFormatException | IndexOutOfBoundsException e) {
+            log.warn("Unable to calculate halt duration from arrival {} and departure {}; using zero.",
+                    arrivalTime, departureTime);
             return 0;
         }
     }

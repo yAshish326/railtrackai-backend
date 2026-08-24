@@ -8,12 +8,16 @@ import com.railtrack.ai.service.AiService;
 import com.railtrack.pnr.dto.response.Passenger;
 import com.railtrack.pnr.dto.response.PnrData;
 import com.railtrack.train.dto.response.TrainSummaryResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
 public class AiServiceImpl implements AiService {
+
+    private static final Logger log = LoggerFactory.getLogger(AiServiceImpl.class);
 
     private final AiChatService aiChatService;
 
@@ -108,7 +112,8 @@ public class AiServiceImpl implements AiService {
                 return Integer.parseInt(parts[0]) * 60 + Integer.parseInt(parts[1]);
             }
             return Integer.parseInt(clean);
-        } catch (RuntimeException ignored) {
+        } catch (NumberFormatException | IndexOutOfBoundsException e) {
+            log.warn("Unable to parse train duration '{}'; treating it as unavailable.", duration);
             return Integer.MAX_VALUE;
         }
     }
