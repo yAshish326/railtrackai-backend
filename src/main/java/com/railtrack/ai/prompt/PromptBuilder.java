@@ -4,6 +4,8 @@ import com.railtrack.pnr.dto.response.Passenger;
 import com.railtrack.pnr.dto.response.PnrData;
 import com.railtrack.pnr.dto.response.PnrResponse;
 import com.railtrack.train.dto.response.TrainSummaryResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.LocalTime;
 import java.time.Duration;
@@ -11,6 +13,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class PromptBuilder {
+
+    private static final Logger log = LoggerFactory.getLogger(PromptBuilder.class);
 
     private PromptBuilder() {
     }
@@ -131,7 +135,9 @@ public class PromptBuilder {
                     }
 
                     calculatedDuration = String.format("%d hours and %d minutes", totalMinutes / 60, totalMinutes % 60);
-                } catch (Exception e) {
+                } catch (NumberFormatException | IndexOutOfBoundsException e) {
+                    log.warn("Unable to calculate duration for train {}; using timestamp fallback.",
+                            train.getTrainNumber());
                     calculatedDuration = "Refer to individual arrival/departure timestamps";
                 }
             }

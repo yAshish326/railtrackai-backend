@@ -1,6 +1,8 @@
 package com.railtrack.train.util;
 
 import com.railtrack.train.dto.response.Train;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
@@ -8,6 +10,8 @@ import java.util.List;
 
 @Component
 public class TrainRecommendationUtil {
+
+    private static final Logger log = LoggerFactory.getLogger(TrainRecommendationUtil.class);
 
     public Train getBestTrain(List<Train> trains) {
 
@@ -68,8 +72,9 @@ public class TrainRecommendationUtil {
             return Integer.parseInt(time[0]) * 60
                     + Integer.parseInt(time[1]);
 
-        } catch (Exception e) {
-
+        } catch (NumberFormatException | IndexOutOfBoundsException e) {
+            log.warn("Unable to parse train travel duration '{}'; treating it as unavailable.",
+                    train.getJourneySegment().getTravelTime());
             return Integer.MAX_VALUE;
         }
     }

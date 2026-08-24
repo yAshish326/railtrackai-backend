@@ -9,8 +9,10 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -35,24 +37,23 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
+                .exceptionHandling(exceptionHandling ->
+                        exceptionHandling.authenticationEntryPoint(
+                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                )
                 .authorizeHttpRequests(auth -> auth
-                        // 1. Specific protected routes MUST come first
-                        .requestMatchers(
-                                "/api/v1/ai/history",
-                                "/api/v1/ai/history/**",
-                                "/api/v1/ai/pnr/**"
-                        ).authenticated()
-
-                        // 2. Broad public endpoints second
+                        // Public authentication, documentation, and public API routes.
                         .requestMatchers(
                                 "/api/v1/auth/**",
-                                "/api/v1/ai/**",
                                 "/api/v1/public/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
                         ).permitAll()
 
-                        // 3. Fallback for all other endpoints
+                        // All AI endpoints use protected user-context functionality.
+                        .requestMatchers("/api/v1/ai/**").authenticated()
+
+                        // All remaining endpoints require authentication.
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(
