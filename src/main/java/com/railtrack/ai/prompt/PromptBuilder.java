@@ -174,6 +174,7 @@ public class PromptBuilder {
     /** Builds a recommendation prompt from PNR data already verified by RailTrack. */
     public static String buildPnrAnalysisPrompt(PnrData pnrData, String status, double chance,
                                                 boolean alternativeSuggested) {
+        String passengerStatuses = buildPassengerStatuses(pnrData.getPassengerList());
         return String.format("""
                 You are RailTrack AI. The following PNR data was retrieved and verified by the RailTrack backend.
                 Treat it as the source of truth. Do not say that live data is unavailable and do not invent fields.
@@ -185,14 +186,39 @@ public class PromptBuilder {
                 Calculated ticket status: %s
                 Estimated confirmation chance: %.1f%%
                 Alternative travel suggested: %s
+                Passenger statuses: %s
 
-                Give a friendly, practical PNR recommendation in at most 70 words. Explain the status and one next step.
+                RAC means the passenger may board and travel, but may share a berth until a full berth is allotted.
+                WAITLISTED means the passenger should not rely on being able to board until the ticket moves to RAC or confirmed.
+                The estimated chance is of receiving a full confirmed berth; it is not a guarantee.
+                Give a friendly, practical PNR recommendation in at most 70 words. Explain the actual status and one next step.
                 Do not use headings, Markdown, or unsupported claims.
                 """,
                 valueOrUnknown(pnrData.getTrainName()), valueOrUnknown(pnrData.getTrainNumber()),
                 valueOrUnknown(pnrData.getSourceStation()), valueOrUnknown(pnrData.getDestinationStation()),
                 valueOrUnknown(pnrData.getDateOfJourney()), valueOrUnknown(pnrData.getChartStatus()),
-                status, chance, alternativeSuggested ? "yes" : "no");
+                status, chance, alternativeSuggested ? "yes" : "no", passengerStatuses);
+    }
+
+    private static String buildPassengerStatuses(List<Passenger> passengers) {
+        if (passengers == null || passengers.isEmpty()) {
+            return "Not available";
+        }
+        return passengers.stream()
+                .map(passenger -> "Passenger " + passenger.getPassengerSerialNumber() + ": "
+                        + firstAvailable(passenger.getCurrentStatusDetails(), passenger.getCurrentStatus(),
+                        passenger.getBookingStatusDetails(), passenger.getBookingStatus()))
+                .reduce((first, second) -> first + "; " + second)
+                .orElse("Not available");
+    }
+
+    private static String firstAvailable(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "Not available";
     }
 
     private static String valueOrUnknown(String value) {

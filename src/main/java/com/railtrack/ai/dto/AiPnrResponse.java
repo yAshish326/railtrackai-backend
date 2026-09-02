@@ -1,8 +1,8 @@
 package com.railtrack.ai.dto;
 
 public class AiPnrResponse {
-    private String currentStatus;       // "CONFIRMED" or "WAITLISTED"
-    private double confirmationChance;   // Percentage estimate (e.g. 65.5)
+    private String currentStatus;       // "CONFIRMED", "RAC", "WAITLISTED", or "UNKNOWN"
+    private double confirmationChance;   // Estimated chance of a full confirmed berth
     private String aiRecommendation;    // Smart advice text or alternate bus text
     private boolean alternativeSuggested; // True if percentage < 70%
 
