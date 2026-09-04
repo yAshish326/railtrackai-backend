@@ -1,5 +1,6 @@
 package com.railtrack.train.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Builder;
 import lombok.Data;
 
@@ -31,4 +32,20 @@ public class TrainSummaryResponse {
     private List<String> runningDays;
 
     private List<String> availableClasses;
+
+    /**
+     * One-based service-day positions supplied by RailRadar for the requested
+     * legs. They are internal matching metadata, not part of the API response.
+     */
+    @JsonIgnore
+    private Integer departureDayNumber;
+
+    @JsonIgnore
+    private Integer arrivalDayNumber;
+
+    @JsonIgnore
+    private Integer departureSequence;
+
+    @JsonIgnore
+    private Integer arrivalSequence;
 }
