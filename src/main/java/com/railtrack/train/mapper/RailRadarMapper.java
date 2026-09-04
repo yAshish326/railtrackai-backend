@@ -301,16 +301,20 @@ public class RailRadarMapper {
                         .distanceKm(getDouble(entry, "distance"))
                         .runningDays(extractStringArrayWithFallback(train, "runDays", "runningDays", "runsOn"))
                         .availableClasses(new ArrayList<>())
+                        .departureDayNumber(getInt(fromLeg, "day"))
+                        .arrivalDayNumber(getInt(toLeg, "day"))
+                        .departureSequence(getInt(fromLeg, "sequence"))
+                        .arrivalSequence(getInt(toLeg, "sequence"))
                         .build());
             }
         }
 
-        Integer count = getInt(data, "count");
-
         return JourneyResponse.builder()
                 .source(sourceName)
                 .destination(destinationName)
-                .totalTrains(count != null ? count : trains.size())
+                // The upstream count can include duplicate entries. The API contract
+                // requires this value to match the returned train list.
+                .totalTrains(trains.size())
                 .trains(trains)
                 .build();
     }

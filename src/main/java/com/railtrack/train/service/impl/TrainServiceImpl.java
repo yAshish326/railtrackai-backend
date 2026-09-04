@@ -238,32 +238,64 @@ public class TrainServiceImpl implements TrainService {
 
         JourneyResponse journeyResponse = mapper.mapBetweenStations(response, from, to);
 
-        if (date != null && journeyResponse != null && journeyResponse.getTrains() != null) {
+        if (journeyResponse != null && journeyResponse.getTrains() != null) {
+            List<TrainSummaryResponse> trains = journeyResponse.getTrains().stream()
+                    .filter(this::hasForwardJourneyLeg)
+                    .collect(Collectors.toList());
 
-            String targetDay = date.getDayOfWeek()
-                    .getDisplayName(java.time.format.TextStyle.SHORT, Locale.ENGLISH).toLowerCase();
+            if (date != null) {
+                trains = trains.stream()
+                        .filter(train -> runsFromStationOn(train, date))
+                        .collect(Collectors.toList());
+            }
 
-            List<TrainSummaryResponse> filteredTrains =
-                    journeyResponse.getTrains().stream()
-                            .filter(train -> {
-                                if (train.getRunningDays() == null || train.getRunningDays().isEmpty()) {
-                                    return true;
-                                }
+            Set<String> seenTrainNumbers = new HashSet<>();
+            List<TrainSummaryResponse> uniqueTrains = trains.stream()
+                    .filter(train -> train.getTrainNumber() == null || train.getTrainNumber().isBlank()
+                            || seenTrainNumbers.add(train.getTrainNumber().trim()))
+                    .collect(Collectors.toList());
 
-                                List<String> runningDaysLower = train.getRunningDays().stream()
-                                        .map(String::toLowerCase)
-                                        .collect(Collectors.toList());
-
-                                return runningDaysLower.contains(targetDay) ||
-                                        runningDaysLower.contains("daily") ||
-                                        runningDaysLower.contains("all");
-                            })
-                            .collect(Collectors.toList());
-
-            journeyResponse.setTrains(filteredTrains);
+            journeyResponse.setTrains(uniqueTrains);
+            journeyResponse.setTotalTrains(uniqueTrains.size());
         }
 
         return journeyResponse;
+    }
+
+    /**
+     * runDays describes the date a train starts at its origin. A train may
+     * reach the requested boarding station on a later calendar date, so derive
+     * that origin date from the requested date and the provider's day number.
+     */
+    private boolean runsFromStationOn(TrainSummaryResponse train, LocalDate requestedDate) {
+        if (train.getRunningDays() == null || train.getRunningDays().isEmpty()) {
+            return true;
+        }
+
+        int dayOffset = train.getDepartureDayNumber() == null
+                ? 0
+                : Math.max(0, train.getDepartureDayNumber() - 1);
+        String originServiceDay = requestedDate.minusDays(dayOffset).getDayOfWeek()
+                .getDisplayName(java.time.format.TextStyle.SHORT, Locale.ENGLISH).toLowerCase();
+
+        List<String> runningDaysLower = train.getRunningDays().stream()
+                .map(String::toLowerCase)
+                .collect(Collectors.toList());
+
+        return runningDaysLower.contains(originServiceDay)
+                || runningDaysLower.contains("daily")
+                || runningDaysLower.contains("all");
+    }
+
+    /** Reject only legs that are demonstrably reversed in the provider data. */
+    private boolean hasForwardJourneyLeg(TrainSummaryResponse train) {
+        if (train.getDepartureSequence() != null && train.getArrivalSequence() != null) {
+            return train.getDepartureSequence() < train.getArrivalSequence();
+        }
+        if (train.getDepartureDayNumber() != null && train.getArrivalDayNumber() != null) {
+            return train.getDepartureDayNumber() <= train.getArrivalDayNumber();
+        }
+        return true;
     }
 
     @Override
